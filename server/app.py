@@ -16,72 +16,97 @@ db.init_app(app)
 
 api = Api(app)
 
-class Home(Resource):
-
+class Index(Resource):
     def get(self):
-        
         response_dict = {
-            "message": "Welcome to the Newsletter RESTful API",
+            "index": "Welcome to the Newsletter RESTful API",
         }
-        
         response = make_response(
             response_dict,
             200,
         )
-
         return response
 
-api.add_resource(Home, '/')
+api.add_resource(Index, '/')
 
 class Newsletters(Resource):
-
     def get(self):
-        
         response_dict_list = [n.to_dict() for n in Newsletter.query.all()]
-
         response = make_response(
             response_dict_list,
             200,
         )
-
         return response
 
     def post(self):
-        
         new_record = Newsletter(
             title=request.form['title'],
             body=request.form['body'],
         )
-
         db.session.add(new_record)
         db.session.commit()
-
         response_dict = new_record.to_dict()
-
         response = make_response(
             response_dict,
             201,
         )
-
         return response
 
 api.add_resource(Newsletters, '/newsletters')
 
 class NewsletterByID(Resource):
-
     def get(self, id):
+        record = Newsletter.query.filter_by(id=id).first()
+        if record:
+            response_dict = record.to_dict()
+            response = make_response(
+                response_dict,
+                200,
+            )
+        else:
+            response = make_response(
+                {"message": "Record not found"},
+                404,
+            )
+        return response
 
-        response_dict = Newsletter.query.filter_by(id=id).first().to_dict()
+    def patch(self, id):
+        record = Newsletter.query.filter_by(id=id).first()
+        if record:
+            for attr in request.form:
+                setattr(record, attr, request.form[attr])
+            db.session.add(record)
+            db.session.commit()
+            response_dict = record.to_dict()
+            response = make_response(
+                response_dict,
+                200
+            )
+        else:
+            response = make_response(
+                {"message": "Record not found"},
+                404,
+            )
+        return response
 
-        response = make_response(
-            response_dict,
-            200,
-        )
-
+    def delete(self, id):
+        record = Newsletter.query.filter_by(id=id).first()
+        if record:
+            db.session.delete(record)
+            db.session.commit()
+            response_dict = {"message": "record successfully deleted"}
+            response = make_response(
+                response_dict,
+                200
+            )
+        else:
+            response = make_response(
+                {"message": "Record not found"},
+                404,
+            )
         return response
 
 api.add_resource(NewsletterByID, '/newsletters/<int:id>')
-
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
